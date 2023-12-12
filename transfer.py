@@ -1,7 +1,7 @@
 from typing import Sequence
 import tensorflow as tf
 import tensorflow.keras.utils as utils
-import tensorflow.keras.applications.densenet as densenet
+import tensorflow.keras.applications.efficientnet_v2 as efficientnet_v2
 import tensorflow.keras as keras
 import tensorflow.keras.layers as layers
 import tensorflow.keras.optimizers as optimizers
@@ -20,21 +20,21 @@ train, validation = utils.image_dataset_from_directory(
     'butterflies',
     label_mode = 'categorical',
     image_size = (224, 224),
-    seed = 1312,
+    seed = 1239,
     validation_split = 0.30,
     subset = "both",
 )
 class_names = train.class_names
-train = train.map(lambda x, y : (densenet.preprocess_input(x), y))
-validation = validation.map(lambda x, y : (densenet.preprocess_input(x), y))
+train = train.map(lambda x, y : (efficientnet_v2.preprocess_input(x), y))
+validation = validation.map(lambda x, y : (efficientnet_v2.preprocess_input(x), y))
 
 
-densenet = densenet.DenseNet121(
+efficientnet_v2 = efficientnet_v2.EfficientNetV2B0(
     include_top = True, # Includes last dense layers
     weights = "imagenet", # Standard image classification weights
     # classifier_activation = 'softmax',
 )
-densenet.trainable = False
+efficientnet_v2.trainable = False
 
 """
 print(f"{train}")
@@ -46,13 +46,13 @@ class MyModel():
   def __init__(self, input_shape):
     super().__init__()
     self.model = Sequential()
-    self.model.add(densenet)
+    self.model.add(efficientnet_v2)
     self.model.add(layers.Dense(1024, activation = 'relu'))
     self.model.add(layers.Dense(256, activation = 'relu'))
     self.model.add(layers.Dense(64, activation = 'relu'))
     self.model.add(layers.Dense(10, activation = 'softmax'))
     self.loss = losses.CategoricalCrossentropy()
-    self.optimizer = optimizers.SGD(learning_rate = 0.6)
+    self.optimizer = optimizers.SGD(learning_rate = 0.01)
 
     self.model.compile(
         loss = self.loss,
@@ -74,31 +74,38 @@ callbacks = [
     ]
 
 def createGraph(accuracy, losses, val_accuracy, val_losses):
+    plt.figure(1)
+    plt.title("Accuracy")
+    plt.xlabel("Epochs")
+    plt.ylabel("Accuracy")
     plt.plot(np.arange(0, len(accuracy)), accuracy)
-    plt.plot(np.arange(0, len(losses)), losses)
     plt.plot(np.arange(0, len(val_accuracy)), val_accuracy)
+    plt.figure(2)
+    plt.title("Loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.plot(np.arange(0, len(losses)), losses)
     plt.plot(np.arange(0, len(val_losses)), val_losses)
     plt.show()
 
 model = MyModel((224,224,3))
 trainData = model.model.fit(
     train,
-    batch_size = 12,
-    epochs = 30,
+    batch_size = 32,
+    epochs = 3,
     verbose = 1,
     validation_data = validation,
-    validation_batch_size = 12,
+    validation_batch_size = 32,
     callbacks=callbacks,
 )
 history = trainData.history
-print(history['accuracy'])
-print(len(history['accuracy']))
 
-save_path = 'saves/faces_model_save_2023_02_08__40_epochs'
+save_path = 'saves/model_save'
 model.model.save(save_path)
 with open(f'{save_path}/class_names.data','wb') as f:
    pickle.dump(class_names, f)
 print(f"{model}")
+
 
 createGraph(
             history['accuracy'],

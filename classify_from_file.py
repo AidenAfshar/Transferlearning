@@ -5,7 +5,7 @@ from subprocess import run
 from random import randrange, choice
 import pickle
 
-load_path = 'saves/faces_model_save_2023_02_08__40_epochs'
+load_path = 'saves/model_save'
 model = models.load_model(load_path)
 
 with open(f'{load_path}/class_names.data', 'rb') as file:
