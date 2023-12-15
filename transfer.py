@@ -15,6 +15,8 @@ import os
 from matplotlib import pyplot as plt
 import numpy as np
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' # Removes unecessary warnings
+
 # setting up training and validation data
 train, validation = utils.image_dataset_from_directory(
     'butterflies',
@@ -32,15 +34,9 @@ validation = validation.map(lambda x, y : (efficientnet_v2.preprocess_input(x), 
 efficientnet_v2 = efficientnet_v2.EfficientNetV2B0(
     include_top = True, # Includes last dense layers
     weights = "imagenet", # Standard image classification weights
-    # classifier_activation = 'softmax',
 )
 efficientnet_v2.trainable = False
 
-"""
-print(f"{train}")
-print(f"{validation}")
-print(f"{densenet}")
-"""
 
 class MyModel():
   def __init__(self, input_shape):
@@ -61,7 +57,7 @@ class MyModel():
     )
     def __str__(self):
         self.model.summary()
-        return ""
+        return "This model uses EfficientNetV2B0 to detect species of butterflies"
     def save(self, filename):
         self.model.save(filename)
 
@@ -73,42 +69,56 @@ callbacks = [
        )
     ]
 
-def createGraph(accuracy, losses, val_accuracy, val_losses):
+def createGraphs(accuracy, losses, val_accuracy, val_losses):
     plt.figure(1)
     plt.title("Accuracy")
     plt.xlabel("Epochs")
     plt.ylabel("Accuracy")
-    plt.plot(np.arange(0, len(accuracy)), accuracy)
-    plt.plot(np.arange(0, len(val_accuracy)), val_accuracy)
+    plt.plot(np.arange(0, len(accuracy)), accuracy, label="train")
+    plt.plot(np.arange(0, len(val_accuracy)), val_accuracy, label="validation")
     plt.figure(2)
     plt.title("Loss")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
-    plt.plot(np.arange(0, len(losses)), losses)
-    plt.plot(np.arange(0, len(val_losses)), val_losses)
+    plt.plot(np.arange(0, len(losses)), losses, label="train")
+    plt.plot(np.arange(0, len(val_losses)), val_losses, label = "validation")
     plt.show()
 
-model = MyModel((224,224,3))
-trainData = model.model.fit(
-    train,
-    batch_size = 32,
-    epochs = 3,
-    verbose = 1,
-    validation_data = validation,
-    validation_batch_size = 32,
-    callbacks=callbacks,
-)
-history = trainData.history
+def main():
+    numEpochs = input("Enter number of epochs: ")
+    while True:
+        try:
+            numEpochs = int(numEpochs)
+            if numEpochs < 1:
+                numEpochs = input("Please enter an integer above 0: ")
+            else:
+                break
+        except:
+            numEpochs = input("Please enter an integer above 0: ")
 
-save_path = 'saves/model_save'
-model.model.save(save_path)
-with open(f'{save_path}/class_names.data','wb') as f:
-   pickle.dump(class_names, f)
-print(f"{model}")
+    model = MyModel((224,224,3))
+    trainData = model.model.fit(
+        train,
+        batch_size = 32,
+        epochs = numEpochs,
+        verbose = 1,
+        validation_data = validation,
+        validation_batch_size = 32,
+        callbacks=callbacks,
+    )
+    history = trainData.history
 
+    save_path = 'saves/model_save'
+    model.model.save(save_path)
+    with open(f'{save_path}/class_names.data','wb') as f:
+       pickle.dump(class_names, f)
+    print(f"{model}")
 
-createGraph(
-            history['accuracy'],
-            history['loss'],
-            history["val_accuracy"],history["val_loss"]
-            )
+    createGraphs(
+                history['accuracy'],
+                history['loss'],
+                history["val_accuracy"],history["val_loss"]
+                )
+    return
+
+main()
